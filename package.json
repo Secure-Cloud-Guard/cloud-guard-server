@@ -1,0 +1,32 @@
+{
+  "name": "cloud-guard-server",
+  "version": "1.0.0",
+  "description": "The Cloud Guard server that provide API for the client. Made with NodeJS, Express and Swagger.",
+  "main": "app.js",
+  "scripts": {
+    "start": "nodemon app.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Secure-Cloud-Guard/cloud-guard-server"
+  },
+  "author": "Dmytro Kagirov",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Secure-Cloud-Guard/cloud-guard-server/issues"
+  },
+  "homepage": "https://github.com/Secure-Cloud-Guard/cloud-guard-server#readme",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.509.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "graphql": "^16.6.0",
+    "graphql-request": "^5.2.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^4.6.2"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  }
+}
