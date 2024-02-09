@@ -30,6 +30,10 @@ npm install
 npm run dev
 ```
 
+## 📸 Screenshots
+
+![App Screenshot](https://github.com/Dmytro27Ind/images/blob/main/cloud-guard-server-1.png)
+
 ## 🛠️ Tech Stack
 - Node.js
 - Express.js
