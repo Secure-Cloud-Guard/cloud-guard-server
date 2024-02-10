@@ -2,18 +2,24 @@ import { Request, Response, NextFunction } from "express";
 import { ListObjectsCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { StatusCodes } from 'http-status-codes';
 import s3Client from '../aws/s3Client.ts';
+import MissingParameter from "../errors/MissingParameter.ts";
 
 const S3Service = {
   createBucket: async function(req: Request, res: Response, next: NextFunction) {
     try {
-    const { Location } = await s3Client.send(new CreateBucketCommand({
-      Bucket: 'cloud-guard-user-' + 123
-    }));
+      const { name } = req.body;
 
-    console.log(`Bucket created with location ${Location}`);
-    res
-      .status(StatusCodes.CREATED)
-      .json({ Location });
+      if (!name) {
+        throw new MissingParameter('Bucket name is required');
+      }
+
+      const { Location } = await s3Client.send(new CreateBucketCommand({
+        Bucket: name
+      }));
+
+      res
+        .status(StatusCodes.CREATED)
+        .json({ Location });
 
     } catch (error) {
       next(error);
@@ -22,7 +28,13 @@ const S3Service = {
 
   bucketObjects: async function(req: Request, res: Response, next: NextFunction) {
     try {
-      const { Contents } = await s3Client.send(new ListObjectsCommand({ Bucket: 'cloud-guard-storage' }));
+      const { name } = req.params;
+
+      if (!name) {
+        throw new MissingParameter('Bucket name is required');
+      }
+
+      const { Contents } = await s3Client.send(new ListObjectsCommand({ Bucket: name }));
       res.json(Contents);
 
     } catch (error) {

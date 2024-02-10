@@ -1,0 +1,114 @@
+openapi: 3.0.3
+info:
+  title: Cloud Guard API
+  version: 1.0.0
+  description: >-
+    The Cloud Guard server that provide API for the client. Made with NodeJS,
+    Express and Swagger.
+servers:
+  - url: http://localhost:3001/api
+tags:
+  - name: Bucket
+    description: Operations related to S3 buckets
+  - name: Bucket Objects
+    description: Operations related to objects within S3 buckets
+paths:
+  /s3/bucket:
+    post:
+      tags:
+        - Bucket
+      summary: Create S3 bucket for the specific user
+      description: Creates an S3 bucket for the specific user.
+      produces:
+        - application/json
+      requestBody:
+        description: Create a new S3 bucket
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/S3BucketCreation'
+      responses:
+        '201':
+          description: Bucket created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/S3BucketCreationResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{name}/objects:
+    get:
+      tags:
+        - Bucket Objects
+      summary: Get list of objects for S3 bucket
+      description: Retrieves a list of objects for the specified S3 bucket.
+      produces:
+        - application/json
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema:
+            type: string
+          description: The name of the S3 bucket
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/S3Object'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  schemas:
+    S3BucketCreation:
+      type: object
+      properties:
+        name:
+          type: string
+          description: The name of the S3 bucket
+    S3BucketCreationResponse:
+      type: object
+      properties:
+        Location:
+          type: string
+          description: The URL/location of the created bucket
+    S3Object:
+      type: object
+      properties:
+        Key:
+          type: string
+          description: The key/name of the object
+        Size:
+          type: integer
+          description: The size of the object in bytes
+        LastModified:
+          type: string
+          description: The object last modified date
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          description: The error message
+        stack:
+          type: string
+          description: The error stack

@@ -1,6 +1,7 @@
 import express, { Express, Request, Response } from "express";
 import path from 'path';
 import fs from 'fs';
+import YAML from 'yaml';
 import * as url from 'url';
 import dotenv from 'dotenv';
 import cors from 'cors';
@@ -8,8 +9,7 @@ import helmet from "helmet";
 import logger from 'morgan';
 import rfs from 'rotating-file-stream';
 import swaggerUi from 'swagger-ui-express';
-import swaggerDocument from './docs/swagger.json' assert { type: "json" };
-import errorHandler from "./middlewares/error.ts";
+import { errorHandler, notFound } from "./middlewares/error.ts";
 import { S3Router } from './routes/s3.ts';
 
 const __filename = url.fileURLToPath(import.meta.url);
@@ -33,7 +33,7 @@ const loggerPath = path.join(__dirname, 'logs/server.log');
 if (fs.existsSync(loggerPath)) {
   fs.unlinkSync(loggerPath);
 }
-const serverLogStream = rfs.createStream('server.log', { interval: '1d', path: path.join(__dirname, 'logs') });
+const serverLogStream = rfs.createStream('server.log', { maxFiles: 5, size: '2M', path: path.join(__dirname, 'logs') });
 app.use(logger('combined'));
 app.use(logger('combined', { stream: serverLogStream }));
 
@@ -41,6 +41,8 @@ app.use(logger('combined', { stream: serverLogStream }));
 app.use(express.json());
 
 // Swagger configuration
+const file  = fs.readFileSync('./docs/swagger.yaml', 'utf8');
+const swaggerDocument = YAML.parse(file);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // Static website
@@ -50,7 +52,8 @@ app.get('/', (req: Request, res: Response) => {
 
 app.use('/api/s3', S3Router)
 
-// error middleware that will return error message incase of server error
+// error middlewares
+app.use(notFound);
 app.use(errorHandler);
 
 app.listen(port, async () => {
