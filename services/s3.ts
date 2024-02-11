@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from "express";
-import { ListObjectsCommand, CreateBucketCommand } from "@aws-sdk/client-s3";
 import { StatusCodes } from 'http-status-codes';
 import s3Client from '../aws/s3Client.ts';
 import MissingParameter from "../errors/MissingParameter.ts";
@@ -13,9 +12,7 @@ const S3Service = {
         throw new MissingParameter('Bucket name is required');
       }
 
-      const { Location } = await s3Client.send(new CreateBucketCommand({
-        Bucket: name
-      }));
+      const { Location } = await s3Client.createBucket(name);
 
       res
         .status(StatusCodes.CREATED)
@@ -34,7 +31,7 @@ const S3Service = {
         throw new MissingParameter('Bucket name is required');
       }
 
-      const { Contents } = await s3Client.send(new ListObjectsCommand({ Bucket: name }));
+      const { Contents } = await s3Client.bucketObjects(name);
       res.json(Contents);
 
     } catch (error) {

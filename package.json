@@ -20,7 +20,9 @@
   },
   "homepage": "https://github.com/Secure-Cloud-Guard/cloud-guard-server#readme",
   "dependencies": {
+    "@aws-sdk/client-cognito-identity-provider": "^3.511.0",
     "@aws-sdk/client-s3": "^3.509.0",
+    "cognito-express": "^3.0.4",
     "cors": "^2.8.5",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",

@@ -11,6 +11,8 @@ import rfs from 'rotating-file-stream';
 import swaggerUi from 'swagger-ui-express';
 import { errorHandler, notFound } from "./middlewares/error.ts";
 import { S3Router } from './routes/s3.ts';
+import { CognitoRouter } from "./routes/cognito.ts";
+import { validateAuth } from "./middlewares/auth.ts";
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
@@ -50,7 +52,11 @@ app.get('/', (req: Request, res: Response) => {
   res.sendFile(__dirname + '/public/index.html');
 })
 
+// Auth middleware to check if user token is valid before protected apis
+app.all('/api/*', validateAuth)
+
 app.use('/api/s3', S3Router)
+app.use('/api/cognito', CognitoRouter)
 
 // error middlewares
 app.use(notFound);

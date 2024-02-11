@@ -7,16 +7,18 @@ info:
     Express and Swagger.
 servers:
   - url: http://localhost:3001/api
+security:
+  - bearerAuth: []
 tags:
-  - name: Bucket
-    description: Operations related to S3 buckets
-  - name: Bucket Objects
-    description: Operations related to objects within S3 buckets
+  - name: S3
+    description: Operations related to S3 service
+  - name: Cognito
+    description: Operations related to Cognito service
 paths:
   /s3/bucket:
     post:
       tags:
-        - Bucket
+        - S3
       summary: Create S3 bucket for the specific user
       description: Creates an S3 bucket for the specific user.
       produces:
@@ -41,6 +43,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
           content:
@@ -50,7 +58,7 @@ paths:
   /s3/bucket/{name}/objects:
     get:
       tags:
-        - Bucket Objects
+        - S3
       summary: Get list of objects for S3 bucket
       description: Retrieves a list of objects for the specified S3 bucket.
       produces:
@@ -71,6 +79,39 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/S3Object'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /cognito/user:
+    get:
+      tags:
+        - Cognito
+      summary: Get user information from Cognito
+      description: Retrieves information about the current authenticated user from Cognito.
+      produces:
+        - application/json
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CognitoUserDetails'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal Server Error
           content:
@@ -78,6 +119,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     S3BucketCreation:
       type: object
@@ -112,3 +158,20 @@ components:
         stack:
           type: string
           description: The error stack
+    CognitoUserDetails:
+      type: object
+      properties:
+        UserAttributes:
+          type: array
+          items:
+            type: object
+            properties:
+              Name:
+                type: string
+                description: The name of the attribute
+              Value:
+                type: string
+                description: The value of the attribute
+        Username:
+          type: string
+          description: The username
