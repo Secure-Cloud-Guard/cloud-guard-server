@@ -78,7 +78,140 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/S3Object'
+                  $ref: '#/components/schemas/S3ObjectFromList'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{bucketName}/{objectKey}/details:
+    get:
+      tags:
+        - S3
+      summary: Get S3 object details
+      description: Retrieves an object details from the specified S3 bucket.
+      parameters:
+        - in: path
+          name: bucketName
+          required: true
+          schema:
+            type: string
+          description: The name of the S3 bucket.
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the object in the S3 bucket.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/S3ObjectDetails'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{bucketName}/{objectKey}/delete:
+    delete:
+      tags:
+        - S3
+      summary: Delete S3 Object
+      description: Deletes an object from the specified S3 bucket.
+      parameters:
+        - in: path
+          name: bucketName
+          required: true
+          schema:
+            type: string
+          description: The name of the S3 bucket.
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the object in the S3 bucket.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: boolean
+                description: Indicates if the object was successfully deleted (true).
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{bucketName}/deleteObjects:
+    delete:
+      tags:
+        - S3
+      summary: Delete S3 Objects
+      description: Deletes multiple objects from the specified S3 bucket.
+      parameters:
+        - in: path
+          name: bucketName
+          required: true
+          schema:
+            type: string
+          description: The name of the S3 bucket.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/S3ObjectsDeletionBody'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/S3ObjectsDeletionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -137,7 +270,26 @@ components:
         Location:
           type: string
           description: The URL/location of the created bucket
-    S3Object:
+    S3ObjectsDeletionBody:
+      type: object
+      properties:
+        objectKeys:
+          type: array
+          items:
+            type: string
+          description: List of object keys to be deleted from the S3 bucket.
+    S3ObjectsDeletionResponse:
+      type: object
+      properties:
+        Deleted:
+          type: array
+          items:
+            type: object
+            properties:
+              Key:
+                type: string
+                description: The key/name of the deleted object.
+    S3ObjectFromList:
       type: object
       properties:
         Key:
@@ -149,6 +301,22 @@ components:
         LastModified:
           type: string
           description: The object last modified date
+    S3ObjectDetails:
+      type: object
+      properties:
+        AcceptRanges:
+          type: string
+          description: Accept ranges of the object.
+        LastModified:
+          type: string
+          format: date-time
+          description: The last modified timestamp of the object.
+        ContentLength:
+          type: integer
+          description: The content length of the object.
+        ContentType:
+          type: string
+          description: The content type of the object.
     ErrorResponse:
       type: object
       properties:
