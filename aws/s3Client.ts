@@ -1,4 +1,4 @@
-import { S3Client, CreateBucketCommand, ListObjectsCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand  } from "@aws-sdk/client-s3";
+import { S3Client, CreateBucketCommand, ListObjectsCommand, GetObjectCommand, DeleteObjectCommand, DeleteObjectsCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -45,6 +45,14 @@ const s3Client = {
         Objects: objectKeys.map(key => ({ Key: key })),
         Quiet: false
       }
+    }));
+  },
+
+  copyBucketObject: async (bucketName: string, objectKey: string, destinationBucket: string, copiedKey: string) => {
+    return await client.send(new CopyObjectCommand({
+      Bucket: destinationBucket,
+      CopySource: bucketName + '/' + objectKey,
+      Key: copiedKey
     }));
   },
 }

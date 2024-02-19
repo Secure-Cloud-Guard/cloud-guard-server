@@ -55,7 +55,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{name}/objects:
+  /s3/bucket/{bucketName}/objects:
     get:
       tags:
         - S3
@@ -65,7 +65,7 @@ paths:
         - application/json
       parameters:
         - in: path
-          name: name
+          name: bucketName
           required: true
           schema:
             type: string
@@ -91,12 +91,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketName}/{objectKey}/details:
-    get:
+    delete:
       tags:
         - S3
-      summary: Get S3 object details
-      description: Retrieves an object details from the specified S3 bucket.
+      summary: Delete S3 Objects
+      description: Deletes multiple objects from the specified S3 bucket.
       parameters:
         - in: path
           name: bucketName
@@ -104,19 +103,19 @@ paths:
           schema:
             type: string
           description: The name of the S3 bucket.
-        - in: path
-          name: objectKey
-          required: true
-          schema:
-            type: string
-          description: The key/name of the object in the S3 bucket.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/S3ObjectsDeletionBody'
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/S3ObjectDetails'
+                $ref: '#/components/schemas/S3ObjectsDeletionResponse'
         '400':
           description: Bad Request
           content:
@@ -135,7 +134,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketName}/{objectKey}/delete:
+  /s3/bucket/{bucketName}/objects/{objectKey}:
     delete:
       tags:
         - S3
@@ -180,12 +179,70 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketName}/deleteObjects:
-    delete:
+  /s3/bucket/{bucketName}/objects/{objectKey}/copy:
+    post:
       tags:
         - S3
-      summary: Delete S3 Objects
-      description: Deletes multiple objects from the specified S3 bucket.
+      summary: Copy S3 Object
+      description: Copies an object within the specified S3 bucket to a new object with the provided key.
+      parameters:
+        - in: path
+          name: bucketName
+          required: true
+          schema:
+            type: string
+          description: The name of the source S3 bucket.
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the source object in the S3 bucket.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                copiedKey:
+                  type: string
+                  description: The key/name of the new object to be created by copying.
+                destinationBucket:
+                  type: string
+                  description: The name of the destination S3 bucket. If not provided, defaults to the source bucket.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: boolean
+                description: Indicates if the object was successfully copied (true).
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{bucketName}/objects/{objectKey}/details:
+    get:
+      tags:
+        - S3
+      summary: Get S3 object details
+      description: Retrieves an object details from the specified S3 bucket.
       parameters:
         - in: path
           name: bucketName
@@ -193,19 +250,19 @@ paths:
           schema:
             type: string
           description: The name of the S3 bucket.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/S3ObjectsDeletionBody'
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the object in the S3 bucket.
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/S3ObjectsDeletionResponse'
+                $ref: '#/components/schemas/S3ObjectDetails'
         '400':
           description: Bad Request
           content:
@@ -261,7 +318,7 @@ components:
     S3BucketCreation:
       type: object
       properties:
-        name:
+        bucketName:
           type: string
           description: The name of the S3 bucket
     S3BucketCreationResponse:

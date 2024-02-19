@@ -6,11 +6,11 @@ import MissingParameter from "../errors/MissingParameter.ts";
 const S3Service = {
   createBucket: async function(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name } = req.body;
+      const { bucketName } = req.body;
 
-      if (!name) throw new MissingParameter('Bucket name is required');
+      if (!bucketName) throw new MissingParameter('Bucket name is required');
 
-      const { Location } = await s3Client.createBucket(name);
+      const { Location } = await s3Client.createBucket(bucketName);
 
       res
         .status(StatusCodes.CREATED)
@@ -23,11 +23,11 @@ const S3Service = {
 
   bucketObjects: async function(req: Request, res: Response, next: NextFunction) {
     try {
-      const { name } = req.params;
+      const { bucketName } = req.params;
 
-      if (!name) throw new MissingParameter('Bucket name is required');
+      if (!bucketName) throw new MissingParameter('Bucket name is required');
 
-      const { Contents } = await s3Client.bucketObjects(name);
+      const { Contents } = await s3Client.bucketObjects(bucketName);
       res.json(Contents);
 
     } catch (error) {
@@ -75,6 +75,28 @@ const S3Service = {
 
       const { Deleted } = await s3Client.deleteBucketObjects(bucketName, objectKeys);
       res.json({ Deleted });
+
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  copyBucketObject: async function(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { bucketName, objectKey } = req.params;
+      const { copiedKey } = req.body;
+      let { destinationBucket } = req.body;
+
+      if (!bucketName) throw new MissingParameter('Bucket name is required');
+      if (!objectKey) throw new MissingParameter('Object key is required');
+      if (!copiedKey) throw new MissingParameter('Copied object key is required');
+
+      if (!destinationBucket) {
+        destinationBucket = bucketName;
+      }
+
+      await s3Client.copyBucketObject(bucketName, objectKey, destinationBucket, copiedKey);
+      res.json(true);
 
     } catch (error) {
       next(error);
