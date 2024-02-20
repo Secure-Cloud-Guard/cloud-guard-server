@@ -4,27 +4,29 @@ The Cloud Guard Server is the backend component of the Cloud Guard project, resp
 ## 🚀 Installation and Setup
 To install and set up the Cloud Guard Server, follow these steps:
 
-1. Clone the repository:
+1. Set Node.js version to `18.13.0`
+
+2. Clone the repository:
 
 ```bash
 git clone https://github.com/Secure-Cloud-Guard/cloud-guard-server.git
 ```
 
-2. Navigate to the project directory:
+3. Navigate to the project directory:
 
 ```bash
 cd cloud-guard-server
 ```
 
-3. Install dependencies:
+4. Install dependencies:
 
 ```bash
 npm install
 ```
 
-4. Create a .env file based on the provided .env-example file, and fill in the necessary environment variables.
+5. Create a .env file based on the provided .env-example file, and fill in the necessary environment variables.
 
-5. Start the server in development mode:
+6. Start the server in development mode:
 
 ```bash
 npm run dev
