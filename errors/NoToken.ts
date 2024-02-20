@@ -1,5 +1,5 @@
 import { StatusCodes } from 'http-status-codes';
-import CustomError from "./CustomError.ts";
+import CustomError from "./CustomError";
 
 export default class NoToken extends CustomError {
   constructor() {

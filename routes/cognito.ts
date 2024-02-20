@@ -1,5 +1,5 @@
 import { Router } from "express";
-import CognitoService from "../services/cognito.ts";
+import CognitoService from "../services/cognito";
 
 const CognitoRouter = Router();
 

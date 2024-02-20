@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
 import CognitoExpress from "cognito-express";
 import { StatusCodes } from 'http-status-codes';
-import NoToken from "../errors/NoToken.ts";
+import NoToken from "../errors/NoToken";
 import dotenv from 'dotenv';
 
 dotenv.config();

@@ -1,5 +1,5 @@
 import { Router } from "express";
-import S3Service from "../services/s3.ts";
+import S3Service from "../services/s3";
 
 const S3Router = Router();
 

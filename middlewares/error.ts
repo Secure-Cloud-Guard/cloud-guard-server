@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from 'http-status-codes';
-import NotFound from "../errors/NotFound.ts";
-import CustomError from "../errors/CustomError.ts";
+import NotFound from "../errors/NotFound";
+import CustomError from "../errors/CustomError";
 
 function notFound(req: Request, res: Response, next: NextFunction) {
   res.status(StatusCodes.NOT_FOUND);

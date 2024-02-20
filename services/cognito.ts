@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import cognitoClient from "../aws/cognitoProviderClient.ts";
+import cognitoClient from "../aws/cognitoProviderClient";
 
 const CognitoService = {
   getUser: async function(req: Request, res: Response, next: NextFunction) {

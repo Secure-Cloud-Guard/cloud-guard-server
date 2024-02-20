@@ -9,10 +9,10 @@ import helmet from "helmet";
 import logger from 'morgan';
 import rfs from 'rotating-file-stream';
 import swaggerUi from 'swagger-ui-express';
-import { errorHandler, notFound } from "./middlewares/error.ts";
-import { S3Router } from './routes/s3.ts';
-import { CognitoRouter } from "./routes/cognito.ts";
-import { validateAuth } from "./middlewares/auth.ts";
+import { errorHandler, notFound } from "./middlewares/error";
+import { S3Router } from './routes/s3';
+import { CognitoRouter } from "./routes/cognito";
+import { validateAuth } from "./middlewares/auth";
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));

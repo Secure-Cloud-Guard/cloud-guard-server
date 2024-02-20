@@ -5,9 +5,10 @@
   "type": "module",
   "main": "app.ts",
   "scripts": {
-    "prod": "cross-env NODE_ENV=production ts-node --esm ./app.ts",
-    "start": "ts-node --esm ./app.ts",
-    "dev": "nodemon --esm ./app.ts"
+    "build": "rimraf dist && tsc && cpy public dist",
+    "prod": "cross-env NODE_ENV=production node --experimental-specifier-resolution=node ./dist/app.js",
+    "start": "node --experimental-specifier-resolution=node ./dist/app.js",
+    "dev": "nodemon --esm --experimentalSpecifierResolution node ./app.ts"
   },
   "repository": {
     "type": "git",
@@ -43,8 +44,11 @@
     "@types/morgan": "^1.9.9",
     "@types/node": "^20.11.17",
     "@types/swagger-ui-express": "^4.1.6",
+    "cpy": "^11.0.0",
+    "cpy-cli": "^5.0.0",
     "cross-env": "^7.0.3",
     "nodemon": "^2.0.22",
+    "rimraf": "^5.0.5",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3"
   }
