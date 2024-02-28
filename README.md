@@ -4,7 +4,7 @@ The Cloud Guard Server is the backend component of the Cloud Guard project, resp
 ## 🚀 Installation and Setup
 To install and set up the Cloud Guard Server, follow these steps:
 
-1. Set Node.js version to `18.13.0`
+1. Set **Node.js** version to `18.13.0`
 
 2. Clone the repository:
 

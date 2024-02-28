@@ -1,4 +1,4 @@
-import express, { Express, NextFunction, Request, Response } from "express";
+import express, { Express, Request, Response } from "express";
 import path from 'path';
 import fs from 'fs';
 import YAML from 'yaml';
@@ -51,16 +51,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.get('/', (req: Request, res: Response) => {
   res.sendFile(__dirname + '/public/index.html');
 })
-
-app.post('/robot/state', async function(req: Request, res: Response, next: NextFunction) {
-  try {
-    console.log('req.body: ', req.body);
-    res.json(true);
-
-  } catch (error) {
-    next(error);
-  }
-});
 
 // Auth middleware to check if user token is valid before protected apis
 app.all('/api/*', validateAuth)

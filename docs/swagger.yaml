@@ -15,47 +15,7 @@ tags:
   - name: Cognito
     description: Operations related to Cognito service
 paths:
-  /s3/bucket:
-    post:
-      tags:
-        - S3
-      summary: Create S3 bucket for the specific user
-      description: Creates an S3 bucket for the specific user.
-      produces:
-        - application/json
-      requestBody:
-        description: Create a new S3 bucket
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/S3BucketCreation'
-      responses:
-        '201':
-          description: Bucket created successfully
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/S3BucketCreationResponse'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketName}/objects:
+  /s3/bucket/{bucketType}/objects:
     get:
       tags:
         - S3
@@ -65,11 +25,11 @@ paths:
         - application/json
       parameters:
         - in: path
-          name: bucketName
+          name: bucketType
           required: true
           schema:
             type: string
-          description: The name of the S3 bucket
+          description: The type of the S3 bucket (storage or personal vault)
       responses:
         '200':
           description: OK
@@ -98,11 +58,11 @@ paths:
       description: Deletes multiple objects from the specified S3 bucket.
       parameters:
         - in: path
-          name: bucketName
+          name: bucketType
           required: true
           schema:
             type: string
-          description: The name of the S3 bucket.
+          description: The type of the S3 bucket. (storage or personal vault)
       requestBody:
         required: true
         content:
@@ -134,7 +94,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketName}/objects/{objectKey}:
+  /s3/bucket/{bucketType}/objects/{objectKey}:
     delete:
       tags:
         - S3
@@ -142,11 +102,11 @@ paths:
       description: Deletes an object from the specified S3 bucket.
       parameters:
         - in: path
-          name: bucketName
+          name: bucketType
           required: true
           schema:
             type: string
-          description: The name of the S3 bucket.
+          description: The type of the S3 bucket. (storage or personal vault)
         - in: path
           name: objectKey
           required: true
@@ -179,7 +139,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketName}/objects/{objectKey}/copy:
+  /s3/bucket/{bucketType}/objects/{objectKey}/copy:
     post:
       tags:
         - S3
@@ -187,11 +147,11 @@ paths:
       description: Copies an object within the specified S3 bucket to a new object with the provided key.
       parameters:
         - in: path
-          name: bucketName
+          name: bucketType
           required: true
           schema:
             type: string
-          description: The name of the source S3 bucket.
+          description: The type of the source S3 bucket. (storage or personal vault)
         - in: path
           name: objectKey
           required: true
@@ -208,9 +168,6 @@ paths:
                 copiedKey:
                   type: string
                   description: The key/name of the new object to be created by copying.
-                destinationBucket:
-                  type: string
-                  description: The name of the destination S3 bucket. If not provided, defaults to the source bucket.
       responses:
         '200':
           description: OK
@@ -237,7 +194,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketName}/objects/{objectKey}/details:
+  /s3/bucket/{bucketType}/objects/{objectKey}/details:
     get:
       tags:
         - S3
@@ -245,11 +202,11 @@ paths:
       description: Retrieves an object details from the specified S3 bucket.
       parameters:
         - in: path
-          name: bucketName
+          name: bucketType
           required: true
           schema:
             type: string
-          description: The name of the S3 bucket.
+          description: The type of the S3 bucket. (storage or personal vault)
         - in: path
           name: objectKey
           required: true
@@ -263,6 +220,45 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/S3ObjectDetails'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{bucketType}/objects/{objectKey}/image:
+    get:
+      tags:
+          - S3
+      summary: Get image preview from S3 bucket.
+      parameters:
+        - in: path
+          name: bucketType
+          required: true
+          schema:
+            type: string
+          description: Type of the bucket.
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: Key of the object in the bucket.
+      responses:
+        '200':
+          description: Image preview.
         '400':
           description: Bad Request
           content:
@@ -315,18 +311,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    S3BucketCreation:
-      type: object
-      properties:
-        bucketName:
-          type: string
-          description: The name of the S3 bucket
-    S3BucketCreationResponse:
-      type: object
-      properties:
-        Location:
-          type: string
-          description: The URL/location of the created bucket
     S3ObjectsDeletionBody:
       type: object
       properties:
@@ -349,15 +333,24 @@ components:
     S3ObjectFromList:
       type: object
       properties:
-        Key:
+        name:
           type: string
-          description: The key/name of the object
-        Size:
+          description: The name of the object
+        size:
           type: integer
           description: The size of the object in bytes
-        LastModified:
+        lastModified:
           type: string
-          description: The object last modified date
+          format: date-time
+          description: The last modified timestamp of the object
+        isFolder:
+          type: boolean
+          description: Indicates if the object is a folder
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/S3ObjectFromList'
+          description: List of child objects (if the object is a folder)
     S3ObjectDetails:
       type: object
       properties:
