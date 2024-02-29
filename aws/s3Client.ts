@@ -1,4 +1,10 @@
-import { S3Client, HeadBucketCommand, CreateBucketCommand, ListObjectsCommand, GetObjectCommand, ListMultipartUploadsCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, DeleteObjectCommand, DeleteObjectsCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
+import {
+  S3Client,
+  HeadBucketCommand, CreateBucketCommand,
+  ListObjectsCommand, DeleteObjectsCommand,
+  GetObjectCommand, HeadObjectCommand, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand,
+  ListMultipartUploadsCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand
+} from "@aws-sdk/client-s3";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -30,8 +36,29 @@ const s3Client = {
     }));
   },
 
+  folderObjects: async (bucketName: string, folderKey: string) => {
+    return await client.send(new ListObjectsCommand({
+      Bucket: bucketName,
+      Prefix: folderKey,
+    }));
+  },
+
   getBucketObject: async (bucketName: string, objectKey: string) => {
     return await client.send(new GetObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey
+    }));
+  },
+
+  isObjectExist: async (bucketName: string, objectKey: string) => {
+    return await client.send(new HeadObjectCommand({
+      Bucket: bucketName,
+      Key: objectKey
+    }));
+  },
+
+  putBucketObject: async (bucketName: string, objectKey: string) => {
+    return await client.send(new PutObjectCommand({
       Bucket: bucketName,
       Key: objectKey
     }));

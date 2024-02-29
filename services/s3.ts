@@ -3,6 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import s3Client from '../aws/s3Client';
 import MissingParameter from "../errors/MissingParameter";
 import MaxSize from "../errors/MaxSize";
+import FolderAlreadyExist from "../errors/FolderAlreadyExist";
 import { BucketObject } from "../types/s3";
 import { MAX_OBJECT_SIZE_MB, OBJECT_PART_SIZE_MB } from "../const/s3";
 
@@ -28,6 +29,22 @@ const S3Service = {
         children: buildObjTree(objects ?? [])
       }];
       res.json(objectsTree ?? []);
+
+    } catch (error) {
+      next(error);
+    }
+  },
+
+  createFolder: async function(req: Request, res: Response, next: NextFunction) {
+    try {
+      const folderName = res.locals.objectKey + '/';
+      try {
+        await s3Client.isObjectExist(res.locals.bucketName, folderName);
+      } catch (e) {
+        await s3Client.putBucketObject(res.locals.bucketName, folderName);
+        res.json(true);
+      }
+      throw new FolderAlreadyExist(folderName);
 
     } catch (error) {
       next(error);
@@ -116,6 +133,17 @@ const S3Service = {
 
   deleteBucketObject: async function(req: Request, res: Response, next: NextFunction) {
     try {
+      const { isFolder } = req.body;
+
+      if (isFolder) {
+        res.locals.objectKey += '/';
+        const { Contents } = await s3Client.folderObjects(res.locals.bucketName, res.locals.objectKey);
+
+        if ((Contents?.length ?? 0) > 0) {
+          await s3Client.deleteBucketObjects(res.locals.bucketName, Contents?.map(item => item.Key) as string[]);
+        }
+      }
+
       await s3Client.deleteBucketObject(res.locals.bucketName, res.locals.objectKey);
       res.json(true);
 
