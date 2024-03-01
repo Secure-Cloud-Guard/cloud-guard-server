@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { StatusCodes } from "http-status-codes";
+import JSZip from "jszip";
 import s3Client from '../aws/s3Client';
 import MissingParameter from "../errors/MissingParameter";
 import MaxSize from "../errors/MaxSize";
@@ -13,13 +14,7 @@ const S3Service = {
     try {
       const { Contents } = await s3Client.bucketObjects(res.locals.bucketName);
 
-      let objects: BucketObject[] | undefined = Contents?.map(obj => ({
-        name: obj.Key?.slice(-1) === '/' ? obj.Key.slice(0, -1) : obj.Key,
-        url: obj.Key,
-        size: obj.Size,
-        lastModified: obj.LastModified,
-        isFolder: (obj.Size === 0 && obj.Key?.slice(-1) === '/'),
-      }) as BucketObject);
+      let objects: BucketObject[] | undefined = bucketContentParse(Contents);
 
       let objectsTree = [{
         name: '/',
@@ -104,6 +99,65 @@ const S3Service = {
     }
   },
 
+  downloadObject: async function(req: Request, res: Response, next: NextFunction) {
+    try {
+      const { folder } = req.headers;
+
+      if (!folder) throw new MissingParameter('Folder header is required');
+
+      if (folder === 'true') {
+        res.locals.objectKey += '/';
+        const { Contents } = await s3Client.folderObjects(res.locals.bucketName, res.locals.objectKey);
+
+        if (Contents && Contents.length > 0) {
+          const zip = new JSZip();
+          const folderName = res.locals.objectKey.slice(0, -1).split('/').pop();
+
+          const objects: BucketObject[] | undefined = bucketContentParse(Contents);
+          let tree = buildObjTree(objects ?? []);
+          const traverse = async (obj: BucketObject, zip: JSZip) => {
+            if (obj.isFolder) {
+              const folder = zip.folder(obj.name);
+              for (const child of obj.children || []) {
+                await traverse(child, folder as JSZip);
+            }
+
+            } else {
+              const { Body } = await s3Client.getBucketObject(res.locals.bucketName, obj.url);
+              const byteArray = await Body?.transformToByteArray() as Uint8Array;
+              zip.file(obj.name, byteArray);
+            }
+          };
+
+          if (tree.length > 0) {
+            await traverse(tree[0], zip);
+          }
+
+          zip.generateAsync({ type: 'nodebuffer' }).then(content => {
+            res.attachment(folderName + '.zip');
+            res.send(content);
+          });
+
+        } else {
+          throw new Error('Folder is empty');
+        }
+
+      } else {
+        const { Body } = await s3Client.getBucketObject(res.locals.bucketName, res.locals.objectKey);
+
+        const objectName = res.locals.objectKey.split('/').pop();
+        res.attachment(objectName);
+
+        const byteArray = await Body?.transformToByteArray();
+        const buffer = new Buffer(byteArray as Uint8Array);
+        res.send(buffer);
+      }
+
+    } catch (error) {
+      next(error);
+    }
+  },
+
   getImagePreview: async function(req: Request, res: Response, next: NextFunction) {
     try {
       const obj = await s3Client.getBucketObject(res.locals.bucketName, res.locals.objectKey);
@@ -180,6 +234,16 @@ const S3Service = {
     }
   },
 };
+
+function bucketContentParse(Contents): BucketObject[] {
+  return Contents?.map(obj => ({
+    name: obj.Key?.slice(-1) === '/' ? obj.Key.slice(0, -1) : obj.Key,
+    url: obj.Key,
+    size: obj.Size,
+    lastModified: obj.LastModified,
+    isFolder: (obj.Size === 0 && obj.Key?.slice(-1) === '/'),
+  }) as BucketObject);
+}
 
 function buildObjTree(objects: BucketObject[]): BucketObject[] {
   for (let i = 0; i < objects.length; i++) {

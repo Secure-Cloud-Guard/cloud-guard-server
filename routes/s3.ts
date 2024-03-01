@@ -14,6 +14,7 @@ S3Router.route('/bucket/:bucketType/objects')
   .delete(S3Service.deleteBucketObjects);
 
 S3Router.route('/bucket/:bucketType/objects/:objectKey*')
+  .get(setObjectKey, S3Service.downloadObject)
   .put(checkBucketSize, setObjectKey, S3Service.createMultipartUpload)
   .patch(checkBucketSize, setObjectKey, S3Service.uploadObjectPart)
   .post(checkBucketSize, setObjectKey, S3Service.completeMultipartUpload)
