@@ -3,7 +3,7 @@ import {
   HeadBucketCommand, CreateBucketCommand,
   ListObjectsCommand, DeleteObjectsCommand,
   GetObjectCommand, HeadObjectCommand, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand,
-  ListMultipartUploadsCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand
+  ListMultipartUploadsCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand
 } from "@aws-sdk/client-s3";
 import dotenv from 'dotenv';
 
@@ -92,6 +92,14 @@ const s3Client = {
     }));
   },
 
+  abortMultipartUpload: async (bucketName: string, objectKey: string) => {
+    return await client.send(new AbortMultipartUploadCommand({
+      Bucket: bucketName,
+      Key: objectKey,
+      UploadId: await getUploadId(bucketName, objectKey),
+    }));
+  },
+
   deleteBucketObject: async (bucketName: string, objectKey: string) => {
     return await client.send(new DeleteObjectCommand({
       Bucket: bucketName,
@@ -140,6 +148,20 @@ async function getUploadId(bucketName: string, objectKey: string): Promise<strin
   }
 
   return uploadId;
+}
+
+async function abortAllUploads(bucketName: string) {
+  const { Uploads } = await client.send(new ListMultipartUploadsCommand({
+    Bucket: bucketName
+  }));
+
+  Uploads?.forEach(async (Upload) => {
+    await client.send(new AbortMultipartUploadCommand({
+      Bucket: bucketName,
+      Key: Upload.Key,
+      UploadId: Upload.UploadId,
+    }));
+  });
 }
 
 export default s3Client;

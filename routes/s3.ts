@@ -4,6 +4,7 @@ import { setBucketName } from "../middlewares/setBucketName";
 import { checkBucketExistence } from "../middlewares/checkBucketExistence";
 import { setObjectKey } from "../middlewares/setObjectKey";
 import { checkBucketSize } from "../middlewares/checkBucketSize";
+import { uploadError } from "../middlewares/uploadError";
 
 const S3Router = Router();
 
@@ -15,9 +16,9 @@ S3Router.route('/bucket/:bucketType/objects')
 
 S3Router.route('/bucket/:bucketType/objects/:objectKey*')
   .get(setObjectKey, S3Service.downloadObject)
-  .put(checkBucketSize, setObjectKey, S3Service.createMultipartUpload)
-  .patch(checkBucketSize, setObjectKey, S3Service.uploadObjectPart)
-  .post(checkBucketSize, setObjectKey, S3Service.completeMultipartUpload)
+  .put(checkBucketSize, setObjectKey, S3Service.createMultipartUpload, uploadError)
+  .patch(checkBucketSize, setObjectKey, S3Service.uploadObjectPart, uploadError)
+  .post(checkBucketSize, setObjectKey, S3Service.completeMultipartUpload, uploadError)
   .delete(setObjectKey, S3Service.deleteBucketObject);
 
 S3Router.use('/bucket/:bucketType/objectService/:objectKey*/func*', setObjectKey);
