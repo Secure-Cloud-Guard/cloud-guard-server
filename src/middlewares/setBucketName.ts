@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import cognitoClient from "../aws/cognitoProviderClient";
+import CognitoClient from "../aws/CognitoClient";
 import MissingParameter from "../errors/MissingParameter";
+import { BucketType } from "../types/s3";
 
 export const setBucketName = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -8,9 +9,7 @@ export const setBucketName = async (req: Request, res: Response, next: NextFunct
 
     if (!bucketType) throw new MissingParameter('Bucket type is required');
 
-    const { Username } = await cognitoClient.getUser(req.headers.authorization?.split(" ")[1] as string);
-
-    res.locals.bucketName = Username + '-' + (bucketType === 'storage' ? 'storage' : 'personal-vault');
+    res.locals.bucketName = res.locals.userId + '-' + (bucketType === BucketType.Storage ? BucketType.Storage : BucketType.PersonalVault);
     next();
 
   } catch (err) {

@@ -41,6 +41,7 @@ npm run dev
 - Express.js
 - TypeScript
 - AWS SDK
+- DynamoDB
 
 ## 📝 Additional Notes
 Make sure you have proper AWS credentials set up for the AWS SDK to interact with AWS services effectively.

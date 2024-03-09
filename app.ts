@@ -9,10 +9,11 @@ import helmet from "helmet";
 import logger from 'morgan';
 import rfs from 'rotating-file-stream';
 import swaggerUi from 'swagger-ui-express';
-import { errorHandler, notFound } from "./middlewares/error";
-import { S3Router } from './routes/s3';
-import { CognitoRouter } from "./routes/cognito";
-import { validateAuth } from "./middlewares/auth";
+import { errorHandler, notFound } from "./src/middlewares/error";
+import { S3Router } from './src/routes/s3';
+import { CognitoRouter } from "./src/routes/cognito";
+import { validateAuth } from "./src/middlewares/auth";
+import { setUserId } from "./src/middlewares/setUserId";
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
@@ -53,7 +54,7 @@ app.get('/', (req: Request, res: Response) => {
 })
 
 // Auth middleware to check if user token is valid before protected apis
-app.all('/api/*', validateAuth)
+app.all('/api/*', validateAuth, setUserId)
 
 app.use('/api/s3', S3Router)
 app.use('/api/cognito', CognitoRouter)

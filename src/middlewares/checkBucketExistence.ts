@@ -1,8 +1,9 @@
 import { NextFunction, Request, Response } from "express";
 import { StatusCodes } from "http-status-codes";
-import s3Client from "../aws/s3Client";
+import S3ServiceClient from "../aws/S3ServiceClient";
 
 export const checkBucketExistence = async (req: Request, res: Response, next: NextFunction) => {
+  const s3Client = new S3ServiceClient();
   try {
     await s3Client.isBucketExist(res.locals.bucketName);
     next();

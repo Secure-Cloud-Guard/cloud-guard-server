@@ -1,10 +1,11 @@
 import { NextFunction, Request, Response } from "express";
-import s3Client from "../aws/s3Client";
+import S3ServiceClient from "../aws/S3ServiceClient";
 import MaxSize from "../errors/MaxSize";
 import { MAX_BUCKET_SIZE_MB } from "../const/s3";
 
 export const checkBucketSize = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const s3Client = new S3ServiceClient();
     const { Contents } = await s3Client.bucketObjects(res.locals.bucketName);
     const bucketSize = Contents?.reduce((total, obj) => total + (obj?.Size ?? 0), 0);
 
