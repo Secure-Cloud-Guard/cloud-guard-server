@@ -38,7 +38,7 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/S3ObjectFromList'
+                  type: object
         '401':
           description: Unauthorized
           content:
@@ -51,11 +51,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-    delete:
+  /s3/bucket/{bucketType}/objects/{objectKey}:
+    get:
       tags:
         - S3
-      summary: Delete S3 Objects
-      description: Deletes multiple objects from the specified S3 bucket.
+      summary: Download S3 Object
+      description: Downloads an object from the specified S3 bucket.
       parameters:
         - in: path
           name: bucketType
@@ -63,19 +64,19 @@ paths:
           schema:
             type: string
           description: The type of the S3 bucket. (storage or personal vault)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/S3ObjectsDeletionBody'
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the object in the S3 bucket.
       responses:
         '200':
           description: OK
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/S3ObjectsDeletionResponse'
+                type: object
         '400':
           description: Bad Request
           content:
@@ -94,7 +95,135 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketType}/objects/{objectKey}:
+    put:
+      tags:
+        - S3
+      summary: Create a multipart uploading.
+      description: Create a multipart uploading to S3.
+      parameters:
+        - in: path
+          name: bucketType
+          required: true
+          schema:
+            type: string
+          description: The type of the S3 bucket. (storage or personal vault)
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the object in the S3 bucket.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - S3
+      summary: Upload part of a multipart object
+      description: Uploads a part of a multipart object to the specified S3 bucket.
+      parameters:
+        - in: path
+          name: bucketType
+          required: true
+          schema:
+            type: string
+          description: The type of the S3 bucket. (storage or personal vault)
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the object in the S3 bucket.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - S3
+      summary: Complete Multipart Upload
+      description: Completes a multipart upload for an object in the specified S3 bucket.
+      parameters:
+        - in: path
+          name: bucketType
+          required: true
+          schema:
+            type: string
+          description: The type of the S3 bucket. (storage or personal vault)
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the object in the S3 bucket.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     delete:
       tags:
         - S3
@@ -139,106 +268,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketType}/objects/{objectKey}/copy:
-    post:
-      tags:
-        - S3
-      summary: Copy S3 Object
-      description: Copies an object within the specified S3 bucket to a new object with the provided key.
-      parameters:
-        - in: path
-          name: bucketType
-          required: true
-          schema:
-            type: string
-          description: The type of the source S3 bucket. (storage or personal vault)
-        - in: path
-          name: objectKey
-          required: true
-          schema:
-            type: string
-          description: The key/name of the source object in the S3 bucket.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                copiedKey:
-                  type: string
-                  description: The key/name of the new object to be created by copying.
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                type: boolean
-                description: Indicates if the object was successfully copied (true).
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketType}/objects/{objectKey}/details:
-    get:
-      tags:
-        - S3
-      summary: Get S3 object details
-      description: Retrieves an object details from the specified S3 bucket.
-      parameters:
-        - in: path
-          name: bucketType
-          required: true
-          schema:
-            type: string
-          description: The type of the S3 bucket. (storage or personal vault)
-        - in: path
-          name: objectKey
-          required: true
-          schema:
-            type: string
-          description: The key/name of the object in the S3 bucket.
-      responses:
-        '200':
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/S3ObjectDetails'
-        '400':
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '401':
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-        '500':
-          description: Internal Server Error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ErrorResponse'
-  /s3/bucket/{bucketType}/objects/{objectKey}/image:
+  /s3/bucket/{bucketType}/objectService/{objectKey}/func/image:
     get:
       tags:
           - S3
@@ -258,7 +288,101 @@ paths:
           description: Key of the object in the bucket.
       responses:
         '200':
-          description: Image preview.
+          description: Image base64 preview.
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{bucketType}/objectService/{objectKey}/func/createFolder:
+    put:
+      tags:
+        - S3
+      summary: Create Folder in S3 Bucket
+      description: Creates a folder in the specified S3 bucket.
+      parameters:
+        - in: path
+          name: bucketType
+          required: true
+          schema:
+            type: string
+          description: The type of the S3 bucket. (storage or personal vault)
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the parent folder in the S3 bucket where the new folder will be created.
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /s3/bucket/{bucketType}/objectService/{objectKey*}/func/shareFolder:
+    post:
+      tags:
+        - S3
+      summary: Share Folder in S3 Bucket
+      description: Shares a folder in the specified S3 bucket with other users.
+      parameters:
+        - in: path
+          name: bucketType
+          required: true
+          schema:
+            type: string
+          description: The type of the S3 bucket. (storage or personal vault)
+        - in: path
+          name: objectKey
+          required: true
+          schema:
+            type: string
+          description: The key/name of the folder in the S3 bucket to be shared.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
         '400':
           description: Bad Request
           content:
@@ -311,62 +435,6 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    S3ObjectsDeletionBody:
-      type: object
-      properties:
-        objectKeys:
-          type: array
-          items:
-            type: string
-          description: List of object keys to be deleted from the S3 bucket.
-    S3ObjectsDeletionResponse:
-      type: object
-      properties:
-        Deleted:
-          type: array
-          items:
-            type: object
-            properties:
-              Key:
-                type: string
-                description: The key/name of the deleted object.
-    S3ObjectFromList:
-      type: object
-      properties:
-        name:
-          type: string
-          description: The name of the object
-        size:
-          type: integer
-          description: The size of the object in bytes
-        lastModified:
-          type: string
-          format: date-time
-          description: The last modified timestamp of the object
-        isFolder:
-          type: boolean
-          description: Indicates if the object is a folder
-        children:
-          type: array
-          items:
-            $ref: '#/components/schemas/S3ObjectFromList'
-          description: List of child objects (if the object is a folder)
-    S3ObjectDetails:
-      type: object
-      properties:
-        AcceptRanges:
-          type: string
-          description: Accept ranges of the object.
-        LastModified:
-          type: string
-          format: date-time
-          description: The last modified timestamp of the object.
-        ContentLength:
-          type: integer
-          description: The content length of the object.
-        ContentType:
-          type: string
-          description: The content type of the object.
     ErrorResponse:
       type: object
       properties:
