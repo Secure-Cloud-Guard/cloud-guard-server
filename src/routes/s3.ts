@@ -11,8 +11,7 @@ const S3Router = Router();
 S3Router.use('/bucket/:bucketType/*', setBucketName, checkBucketExistence);
 
 S3Router.route('/bucket/:bucketType/objects')
-  .get(S3Controller.bucketObjects)
-  .delete(S3Controller.deleteBucketObjects);
+  .get(S3Controller.bucketObjects);
 
 S3Router.route('/bucket/:bucketType/objects/:objectKey*')
   .get(setObjectKey, S3Controller.downloadObject)
@@ -23,11 +22,8 @@ S3Router.route('/bucket/:bucketType/objects/:objectKey*')
 
 S3Router.use('/bucket/:bucketType/objectService/:objectKey*/func*', setObjectKey);
 
-S3Router.get('/bucket/:bucketType/objectService/:objectKey*/func/details', S3Controller.getBucketObjDetails);
 S3Router.get('/bucket/:bucketType/objectService/:objectKey*/func/image', S3Controller.getImagePreview);
-S3Router.post('/bucket/:bucketType/objectService/:objectKey*/func/copy', S3Controller.copyBucketObject);
 S3Router.put('/bucket/:bucketType/objectService/:objectKey*/func/createFolder', S3Controller.createFolder);
 S3Router.post('/bucket/:bucketType/objectService/:objectKey*/func/shareFolder', S3Controller.shareFolder);
-S3Router.get('/bucket/:bucketType/objectService/:objectKey*/func/getShareWithEmails', S3Controller.getShareWithEmails);
 
 export { S3Router };

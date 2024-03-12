@@ -14,6 +14,7 @@ export interface BucketObject {
     isFolder: boolean,
     shadowFolder?: boolean,
     sharing?: BucketObjectSharing,
+    originalKey?: string,
     children?: BucketObject[]
 }
 

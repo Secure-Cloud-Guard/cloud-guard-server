@@ -2,3 +2,5 @@
 export const MAX_BUCKET_SIZE_MB = 100;
 export const MAX_OBJECT_SIZE_MB = 100;
 export const OBJECT_PART_SIZE_MB = 10;
+export const OBJECT_PART_SIZE_BYTES = 10 * 1024 * 1024;
+export const ENCRYPTED_PART_SIZE_BYTES = OBJECT_PART_SIZE_BYTES + 16;

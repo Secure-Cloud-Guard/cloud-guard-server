@@ -3,7 +3,7 @@ import { StatusCodes } from "http-status-codes";
 import S3ServiceClient from "../aws/S3ServiceClient";
 
 export const checkBucketExistence = async (req: Request, res: Response, next: NextFunction) => {
-  const s3Client = new S3ServiceClient();
+  const s3Client = new S3ServiceClient(res.locals.sseKey);
   try {
     await s3Client.isBucketExist(res.locals.bucketName);
     next();

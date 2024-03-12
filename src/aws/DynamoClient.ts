@@ -1,4 +1,4 @@
-import { DynamoDBClient, GetItemCommand, PutItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
+import { DeleteItemCommand, DynamoDBClient, GetItemCommand, PutItemCommand, ScanCommand } from "@aws-sdk/client-dynamodb";
 import dotenv from 'dotenv';
 import CognitoClient from "./CognitoClient";
 import { AccessRights, ShareWithUser } from "../types/s3";
@@ -20,26 +20,38 @@ class DynamoClient {
   }
 
   async share(ownerId: string, folderUrl: string, userIds: string[]) {
-    const input = {
+    if (userIds.length === 0) {
+      await this.deleteSharing(ownerId, folderUrl);
+    } else {
+      await this.client.send(new PutItemCommand({
+        TableName: this.SHARING_TABLE,
+        Item: {
+          sharingId: {
+            S: ownerId + '-' + folderUrl
+          },
+          ownerId: {
+            S: ownerId
+          },
+          folderUrl: {
+            S: folderUrl
+          },
+          userIds: {
+            SS: userIds
+          }
+        }
+      }));
+    }
+  }
+
+  async deleteSharing(ownerId: string, folderUrl: string) {
+    await this.client.send(new DeleteItemCommand({
       TableName: this.SHARING_TABLE,
-      Item: {
+      Key: {
         sharingId: {
           S: ownerId + '-' + folderUrl
         },
-        ownerId: {
-          S: ownerId
-        },
-        folderUrl: {
-          S: folderUrl
-        },
-        userIds: {
-          SS: userIds.length > 0 ? userIds : ['']
-        }
       }
-    };
-
-    await this.client.send(new PutItemCommand(input));
-    return true;
+    }));
   }
 
   async getShareWithIds(ownerId: string, folderUrl: string) {
@@ -61,10 +73,15 @@ class DynamoClient {
   async getShareWith(ownerId: string, folderUrl: string) {
     const shareWithIds = await this.getShareWithIds(ownerId, folderUrl) as string[];
     let shareWith: ShareWithUser[] = [];
+    let emails: any = [];
+
+    if (shareWithIds.length > 0) {
+      const cognitoClient = new CognitoClient();
+      emails = await cognitoClient.getUserEmails(shareWithIds);
+    }
 
     for (let userId of shareWithIds) {
-      const cognitoClient = new CognitoClient();
-      const userEmail = await cognitoClient.getUserEmail(userId);
+      const userEmail = emails[userId];
 
       if (!userEmail) {
         continue;
@@ -88,13 +105,14 @@ class DynamoClient {
     const sharingFolders: { ownerId: string, ownerEmail: string, folderUrl: string }[] = [];
 
     if (Items) {
+      const cognitoClient = new CognitoClient();
+      const emails = await cognitoClient.getUserEmails(Items.map(sharing => sharing.ownerId.S as string));
+
       for (let sharing of Items) {
         const ownerId = sharing.ownerId.S as string;
         const folderUrl = sharing.folderUrl.S as string;
         const shareWith = sharing.userIds.SS;
-
-        const cognitoClient = new CognitoClient();
-        const ownerEmail = await cognitoClient.getUserEmail(ownerId);
+        const ownerEmail = emails?.[ownerId];
 
         if (shareWith?.includes(userId) && ownerEmail) {
           sharingFolders.push({ ownerId, ownerEmail, folderUrl });

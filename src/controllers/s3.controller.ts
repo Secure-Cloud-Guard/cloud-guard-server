@@ -7,14 +7,15 @@ import MaxSize from "../errors/MaxSize";
 import ShareWithYourself from "../errors/ShareWithYourself";
 import { MAX_OBJECT_SIZE_MB, OBJECT_PART_SIZE_MB } from "../const/s3";
 import { BucketType } from "../types/s3";
-
+import vaultClient from '../vault/VaultClient';
+import DynamoClient from "../aws/DynamoClient";
 
 
 const S3Controller = {
   bucketObjects: async function(req: Request, res: Response, next: NextFunction) {
     try {
       const { bucketType } = req.params;
-      const objects = await S3Service.bucketObjects(res.locals.bucketName, bucketType as BucketType, res.locals.userId)
+      const objects = await S3Service.bucketObjects(res.locals.bucketName, bucketType as BucketType, res.locals.userId, res.locals.sseKey)
       res.json(objects);
 
     } catch (error) {
@@ -24,7 +25,7 @@ const S3Controller = {
 
   createFolder: async function(req: Request, res: Response, next: NextFunction) {
     try {
-      const created = await S3Service.createFolder(res.locals.bucketName, res.locals.objectKey);
+      const created = await S3Service.createFolder(res.locals.bucketName, res.locals.objectKey, res.locals.sseKey);
       res.json(created);
 
     } catch (error) {
@@ -48,17 +49,7 @@ const S3Controller = {
         throw new ShareWithYourself(res.locals.objectKey);
       }
 
-      const shared = await S3Service.shareFolder(res.locals.userId, res.locals.bucketName, res.locals.objectKey, userIds);
-      res.json(shared);
-
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  getShareWithEmails: async function(req: Request, res: Response, next: NextFunction) {
-    try {
-      const shared = await S3Service.getShareWithEmails(res.locals.userId, res.locals.bucketName, res.locals.objectKey);
+      const shared = await S3Service.shareFolder(res.locals.userId, res.locals.bucketName, res.locals.objectKey, userIds, res.locals.sseKey);
       res.json(shared);
 
     } catch (error) {
@@ -68,7 +59,7 @@ const S3Controller = {
 
   createMultipartUpload: async function(req: Request, res: Response, next: NextFunction) {
     try {
-      const created = await S3Service.createMultipartUpload(res.locals.bucketName, res.locals.objectKey);
+      const created = await S3Service.createMultipartUpload(res.locals.bucketName, res.locals.objectKey, res.locals.sseKey);
       res.json(created);
 
     } catch (error) {
@@ -92,7 +83,7 @@ const S3Controller = {
 
       req.on('end', async () => {
         const part = Buffer.concat(chunks);
-        const uploadPart = await S3Service.uploadObjectPart(res.locals.bucketName, res.locals.objectKey, part, partNumber as string);
+        const uploadPart = await S3Service.uploadObjectPart(res.locals.bucketName, res.locals.objectKey, part, partNumber as string, res.locals.sseKey);
         res.json(uploadPart);
       });
 
@@ -111,7 +102,7 @@ const S3Controller = {
         throw new MaxSize(MAX_OBJECT_SIZE_MB, 'File', res.locals.objectKey);
       }
 
-      const completed = await S3Service.completeMultipartUpload(res.locals.bucketName, res.locals.objectKey, uploadedParts);
+      const completed = await S3Service.completeMultipartUpload(res.locals.bucketName, res.locals.objectKey, uploadedParts, res.locals.sseKey);
       res.json(completed);
 
     } catch (error) {
@@ -134,7 +125,17 @@ const S3Controller = {
         objectKey = res.locals.objectKey.split('/').slice(1).join('/');
       }
 
-      const { name, content } = await S3Service.downloadObject(bucketName, objectKey, folder === 'true');
+      if (owner === 'false' && folder === 'true') {
+        const dynamoClient = new DynamoClient();
+        const shareWith = (await dynamoClient.getShareWith(ownerId as string, objectKey + '/')).map(share => share.userId);
+
+        if (!shareWith.includes(res.locals.userId)) {
+          throw new Error('You do not have access to this folder');
+        }
+      }
+
+      const sseKey = owner === 'false' ? await vaultClient.getSSEkey(ownerId as string) : res.locals.sseKey;
+      const { name, content } = await S3Service.downloadObject(bucketName, objectKey, folder === 'true', sseKey);
       res.attachment(name);
       res.send(content);
 
@@ -156,7 +157,8 @@ const S3Controller = {
         objectKey = res.locals.objectKey.split('/').slice(1).join('/');
       }
 
-      const { contentType, objBase64 } = await S3Service.getImagePreview(bucketName, objectKey);
+      const sseKey = owner === 'false' ? await vaultClient.getSSEkey(ownerId as string) : res.locals.sseKey;
+      const { contentType, objBase64 } = await S3Service.getImagePreview(bucketName, objectKey, sseKey);
       res
         .status(StatusCodes.OK)
         .contentType(contentType)
@@ -168,49 +170,11 @@ const S3Controller = {
     }
   },
 
-  getBucketObjDetails: async function(req: Request, res: Response, next: NextFunction) {
-    try {
-      const details = await S3Service.getBucketObjDetails(res.locals.bucketName, res.locals.objectKey);
-      res.json(details);
-
-    } catch (error) {
-      next(error);
-    }
-  },
-
   deleteBucketObject: async function(req: Request, res: Response, next: NextFunction) {
     try {
       const { isFolder } = req.body;
-      const deleted = await S3Service.deleteBucketObject(res.locals.bucketName, res.locals.objectKey, isFolder);
+      const deleted = await S3Service.deleteBucketObject(res.locals.bucketName, res.locals.objectKey, isFolder, res.locals.userId, res.locals.sseKey);
       res.json(deleted);
-
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  deleteBucketObjects: async function(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { objectKeys } = req.body;
-
-      if (!objectKeys) throw new MissingParameter('Object keys is required');
-
-      const deleted = await S3Service.deleteBucketObjects(res.locals.bucketName, objectKeys);
-      res.json(deleted);
-
-    } catch (error) {
-      next(error);
-    }
-  },
-
-  copyBucketObject: async function(req: Request, res: Response, next: NextFunction) {
-    try {
-      const { copiedKey } = req.body;
-
-      if (!copiedKey) throw new MissingParameter('Copied object key is required');
-
-      const copied = await S3Service.copyBucketObject(res.locals.bucketName, res.locals.objectKey, copiedKey);
-      res.json(copied);
 
     } catch (error) {
       next(error);

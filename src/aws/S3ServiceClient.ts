@@ -2,17 +2,19 @@ import {
   S3Client,
   HeadBucketCommand, CreateBucketCommand,
   ListObjectsCommand, DeleteObjectsCommand,
-  GetObjectCommand, HeadObjectCommand, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand,
+  GetObjectCommand, HeadObjectCommand, PutObjectCommand, DeleteObjectCommand,
   ListMultipartUploadsCommand, CreateMultipartUploadCommand, UploadPartCommand, CompleteMultipartUploadCommand, AbortMultipartUploadCommand
 } from "@aws-sdk/client-s3";
 import dotenv from 'dotenv';
+import { CryptoService } from "../services/crypto.service";
 
 dotenv.config();
 
 class S3ServiceClient {
   private client: S3Client;
+  private cryptoService: CryptoService;
 
-  constructor() {
+  constructor(sseKey: string) {
     this.client = new S3Client({
       region: process.env.S3_REGION,
       credentials: {
@@ -20,6 +22,7 @@ class S3ServiceClient {
         secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY as string,
       },
     });
+    this.cryptoService = new CryptoService(sseKey);
   }
 
   async isBucketExist(name: string) {
@@ -35,57 +38,67 @@ class S3ServiceClient {
   }
 
   async bucketObjects(name: string) {
-    return await this.client.send(new ListObjectsCommand({
+    const { Contents } = await this.client.send(new ListObjectsCommand({
       Bucket: name
     }));
+
+    Contents?.forEach(obj => obj.Key = this.cryptoService.decryptUrl(obj.Key as string));
+    return { Contents };
   }
 
   async folderObjects(bucketName: string, folderKey: string) {
-    return await this.client.send(new ListObjectsCommand({
+    const { Contents } = await this.client.send(new ListObjectsCommand({
       Bucket: bucketName,
-      Prefix: folderKey,
+      Prefix: this.cryptoService.encryptUrl(folderKey),
     }));
+
+    Contents?.forEach(obj => obj.Key = this.cryptoService.decryptUrl(obj.Key as string));
+    return { Contents };
   }
 
   async getBucketObject(bucketName: string, objectKey: string) {
     return await this.client.send(new GetObjectCommand({
       Bucket: bucketName,
-      Key: objectKey
+      Key: this.cryptoService.encryptUrl(objectKey)
     }));
   }
 
   async isObjectExist(bucketName: string, objectKey: string) {
     return await this.client.send(new HeadObjectCommand({
       Bucket: bucketName,
-      Key: objectKey
+      Key: this.cryptoService.encryptUrl(objectKey)
     }));
   }
 
   async putBucketObject(bucketName: string, objectKey: string) {
     return await this.client.send(new PutObjectCommand({
       Bucket: bucketName,
-      Key: objectKey
+      Key: this.cryptoService.encryptUrl(objectKey)
     }));
   }
 
   async createMultipartUpload(bucketName: string, objectKey: string) {
     return await this.client.send(new CreateMultipartUploadCommand({
       Bucket: bucketName,
-      Key: objectKey,
+      Key: this.cryptoService.encryptUrl(objectKey),
     }));
   }
 
   async uploadPart(bucketName: string, objectKey: string, part, partNumber: string) {
+    objectKey = this.cryptoService.encryptUrl(objectKey);
+
     return await this.client.send(new UploadPartCommand({
       Bucket: bucketName,
       Key: objectKey,
-      Body: part,
+      Body: this.cryptoService.encryptBuffer(part),
       PartNumber: parseInt(partNumber),
       UploadId: await this.getUploadId(bucketName, objectKey),
     }));
   }
 
   async completeMultipartUpload(bucketName: string, objectKey: string, uploadedParts: []) {
+    objectKey = this.cryptoService.encryptUrl(objectKey);
+
     return await this.client.send(new CompleteMultipartUploadCommand({
       Bucket: bucketName,
       Key: objectKey,
@@ -97,6 +110,8 @@ class S3ServiceClient {
   }
 
   async abortMultipartUpload(bucketName: string, objectKey: string) {
+    objectKey = this.cryptoService.encryptUrl(objectKey);
+
     return await this.client.send(new AbortMultipartUploadCommand({
       Bucket: bucketName,
       Key: objectKey,
@@ -107,7 +122,7 @@ class S3ServiceClient {
   async deleteBucketObject(bucketName: string, objectKey: string) {
     return await this.client.send(new DeleteObjectCommand({
       Bucket: bucketName,
-      Key: objectKey
+      Key: this.cryptoService.encryptUrl(objectKey)
     }));
   }
 
@@ -115,17 +130,9 @@ class S3ServiceClient {
     return await this.client.send(new DeleteObjectsCommand ({
       Bucket: bucketName,
       Delete: {
-        Objects: objectKeys.map(key => ({ Key: key })),
+        Objects: objectKeys.map(key => ({ Key: this.cryptoService.encryptUrl(key) })),
         Quiet: false
       }
-    }));
-  }
-
-  async copyBucketObject(bucketName: string, objectKey: string, copiedKey: string) {
-    return await this.client.send(new CopyObjectCommand({
-      Bucket: bucketName,
-      CopySource: bucketName + '/' + objectKey,
-      Key: copiedKey
     }));
   }
 

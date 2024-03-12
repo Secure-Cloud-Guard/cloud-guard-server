@@ -14,11 +14,14 @@ import { S3Router } from './src/routes/s3';
 import { CognitoRouter } from "./src/routes/cognito";
 import { validateAuth } from "./src/middlewares/auth";
 import { setUserId } from "./src/middlewares/setUserId";
+import { setSSEkey } from "./src/middlewares/setSSEkey";
+
+
+dotenv.config();
 
 const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
-dotenv.config();
 const app: Express = express()
 const port = process.env.PORT || 3000;
 
@@ -54,7 +57,7 @@ app.get('/', (req: Request, res: Response) => {
 })
 
 // Auth middleware to check if user token is valid before protected apis
-app.all('/api/*', validateAuth, setUserId)
+app.all('/api/*', validateAuth, setUserId, setSSEkey)
 
 app.use('/api/s3', S3Router)
 app.use('/api/cognito', CognitoRouter)

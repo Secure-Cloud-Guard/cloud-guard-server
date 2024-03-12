@@ -1,4 +1,4 @@
-import { CognitoIdentityProviderClient, GetUserCommand, AdminGetUserCommand } from "@aws-sdk/client-cognito-identity-provider";
+import { CognitoIdentityProviderClient, GetUserCommand, AdminGetUserCommand, ListUsersCommand } from "@aws-sdk/client-cognito-identity-provider";
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -31,18 +31,22 @@ class CognitoClient {
     }));
   }
 
-  async getUserEmail(userId: string) {
-    const { UserAttributes } = await this.getUser(userId);
+  async getUserEmails(userIds: string[]) {
+    const response = await this.client.send(new ListUsersCommand({
+      UserPoolId: this.userPoolId,
+      AttributesToGet: ['sub', 'email'],
+    }));
 
-      if (!UserAttributes) {
-        return;
-      }
+    return response.Users?.reduce((acc, user) => {
+      const userAttrs = user.Attributes;
+      const subAttr = userAttrs?.find(attr => attr.Name === 'sub');
+      const emailAttr = userAttrs?.find(attr => attr.Name === 'email');
 
-      for (const attribute of UserAttributes) {
-        if (attribute.Name === 'email') {
-          return attribute.Value as string;
-        }
+      if (subAttr && emailAttr && userIds.includes(subAttr?.Value as string)) {
+        acc[subAttr?.Value as string] = emailAttr.Value;
       }
+      return acc;
+    }, {});
   }
 }
 

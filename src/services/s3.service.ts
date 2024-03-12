@@ -4,11 +4,13 @@ import DynamoClient from "../aws/DynamoClient";
 import FolderAlreadyExist from "../errors/FolderAlreadyExist";
 import FolderNotExist from "../errors/FolderNotExist";
 import { BucketObject, BucketType } from "../types/s3";
+import { CryptoService } from "./crypto.service";
+import vaultClient from '../vault/VaultClient';
 
 
 const S3Service = {
-  bucketObjects: async function(bucketName: string, bucketType: BucketType, userId: string) {
-    const s3Client = new S3ServiceClient();
+  bucketObjects: async function(bucketName: string, bucketType: BucketType, userId: string, sseKey: string) {
+    const s3Client = new S3ServiceClient(sseKey);
     const { Contents } = await s3Client.bucketObjects(bucketName);
 
     let objects: BucketObject[] | null = await bucketContentParse(Contents, bucketType, userId, true);
@@ -29,7 +31,8 @@ const S3Service = {
 
       if (sharingFolders.length > 0) {
         for (let sharing of sharingFolders) {
-          const { Contents } = await s3Client.folderObjects(sharing.ownerId + '-' + BucketType.Storage, sharing.folderUrl);
+          const s3 = new S3ServiceClient(await vaultClient.getSSEkey(sharing.ownerId));
+          const { Contents } = await s3.folderObjects(sharing.ownerId + '-' + BucketType.Storage, sharing.folderUrl);
 
           if (Contents && Contents.length > 0 && (Contents[0].Key?.split('/')?.length ?? 0) > 2) {
             Contents.unshift(...generateParentDirectories(Contents[0]));
@@ -65,8 +68,8 @@ const S3Service = {
     return objectsTree ?? [];
   },
 
-  createFolder: async function(bucketName: string, objectKey: string) {
-    const s3Client = new S3ServiceClient();
+  createFolder: async function(bucketName: string, objectKey: string, sseKey: string) {
+    const s3Client = new S3ServiceClient(sseKey);
     const folderName = objectKey + '/';
 
     try {
@@ -78,11 +81,11 @@ const S3Service = {
     throw new FolderAlreadyExist(folderName);
   },
 
-  shareFolder: async function(ownerId: string, bucketName: string, objectKey: string, userIds: string[]) {
+  shareFolder: async function(ownerId: string, bucketName: string, objectKey: string, userIds: string[], sseKey: string) {
     const folderName = objectKey + '/';
 
     try {
-      const s3Client = new S3ServiceClient();
+      const s3Client = new S3ServiceClient(sseKey);
       await s3Client.isObjectExist(bucketName, folderName);
 
     } catch (e) {
@@ -90,50 +93,36 @@ const S3Service = {
     }
 
     const dynamoClient = new DynamoClient();
-    const shared = await dynamoClient.share(ownerId, folderName, userIds);
-    return shared;
+    await dynamoClient.share(ownerId, folderName, userIds);
+    return true;
   },
 
-  getShareWithEmails: async function(ownerId: string, bucketName: string, objectKey: string) {
-    const folderName = objectKey + '/';
-
-    try {
-      const s3Client = new S3ServiceClient();
-      await s3Client.isObjectExist(bucketName, folderName);
-
-    } catch (e) {
-      throw new FolderNotExist(folderName);
-    }
-
-    const dynamoClient = new DynamoClient();
-    return (await dynamoClient.getShareWith(ownerId, folderName))
-      .map(shareWithUser => shareWithUser.userEmail);
-  },
-
-  createMultipartUpload: async function(bucketName: string, objectKey: string) {
-    const s3Client = new S3ServiceClient();
+  createMultipartUpload: async function(bucketName: string, objectKey: string, sseKey: string) {
+    const s3Client = new S3ServiceClient(sseKey);
     await s3Client.createMultipartUpload(bucketName, objectKey);
     return true;
   },
 
-  uploadObjectPart: async function(bucketName: string, objectKey: string, part: any, partNumber: string) {
-    const s3Client = new S3ServiceClient();
+  uploadObjectPart: async function(bucketName: string, objectKey: string, part: any, partNumber: string, sseKey: string) {
+    const s3Client = new S3ServiceClient(sseKey);
     const { ETag } = await s3Client.uploadPart(bucketName, objectKey, part, partNumber);
     return { PartNumber: partNumber, ETag: ETag };
   },
 
-  completeMultipartUpload: async function(bucketName: string, objectKey: string, uploadedParts: any) {
-    const s3Client = new S3ServiceClient();
+  completeMultipartUpload: async function(bucketName: string, objectKey: string, uploadedParts: any, sseKey: string) {
+    const s3Client = new S3ServiceClient(sseKey);
     await s3Client.completeMultipartUpload(bucketName, objectKey, uploadedParts);
     return true;
   },
 
-  downloadObject: async function(bucketName: string, objectKey: string, folder: boolean) {
-    const s3Client = new S3ServiceClient();
+  downloadObject: async function(bucketName: string, objectKey: string, folder: boolean, sseKey: string) {
+    const cryptoService = new CryptoService(sseKey);
+    const s3Client = new S3ServiceClient(sseKey);
 
     if (folder) {
       objectKey += '/';
       const { Contents } = await s3Client.folderObjects(bucketName, objectKey);
+      processParentPath(Contents);
 
       if (Contents && Contents.length > 0) {
         const zip = new JSZip();
@@ -141,6 +130,7 @@ const S3Service = {
 
         const objects: BucketObject[] | null = await bucketContentParse(Contents);
         let tree = buildObjTree(objects ?? []);
+
         const traverse = async (obj: BucketObject, zip: JSZip) => {
           if (obj.isFolder) {
             const folder = zip.folder(obj.name);
@@ -149,9 +139,10 @@ const S3Service = {
             }
 
           } else {
-            const { Body } = await s3Client.getBucketObject(bucketName, obj.url);
-            const byteArray = await Body?.transformToByteArray() as Uint8Array;
-            zip.file(obj.name, byteArray);
+            const { Body } = await s3Client.getBucketObject(bucketName, obj.originalKey ?? obj.url);
+            const encryptedBuffer = Buffer.from(await Body?.transformToByteArray() as Uint8Array);
+            const buffer = cryptoService.decryptBufferByChunks(encryptedBuffer);
+            zip.file(obj.name, buffer);
           }
         };
 
@@ -171,32 +162,32 @@ const S3Service = {
     } else {
       const { Body } = await s3Client.getBucketObject(bucketName, objectKey);
       const objectName = objectKey.split('/').pop();
-      const byteArray = await Body?.transformToByteArray();
+      const encryptedBuffer = Buffer.from(await Body?.transformToByteArray() as Uint8Array);
 
       return {
         name: objectName,
-        content: new Buffer(byteArray as Uint8Array)
+        content: cryptoService.decryptBufferByChunks(encryptedBuffer)
       };
     }
   },
 
-  getImagePreview: async function(bucketName: string, objectKey: string) {
-    const s3Client = new S3ServiceClient();
+  getImagePreview: async function(bucketName: string, objectKey: string, sseKey: string) {
+    const cryptoService = new CryptoService(sseKey);
+    const s3Client = new S3ServiceClient(sseKey);
+
     const obj = await s3Client.getBucketObject(bucketName, objectKey);
-    const objBase64 = await obj?.Body?.transformToString("base64");
+    const encryptedBuffer = Buffer.from(await obj?.Body?.transformToByteArray() as Uint8Array);
+
+    const buffer = cryptoService.decryptBufferByChunks(encryptedBuffer);
+    const objBase64 = buffer.toString('base64');
     const contentType = obj?.ContentType ?? 'application/json';
 
     return { contentType, objBase64 }
   },
 
-  getBucketObjDetails: async function(bucketName: string, objectKey: string) {
-    const s3Client = new S3ServiceClient();
-    const { AcceptRanges, LastModified, ContentLength, ContentType } = await s3Client.getBucketObject(bucketName, objectKey);
-    return { AcceptRanges, LastModified, ContentLength, ContentType };
-  },
-
-  deleteBucketObject: async function(bucketName: string, objectKey: string, isFolder: any) {
-    const s3Client = new S3ServiceClient();
+  deleteBucketObject: async function(bucketName: string, objectKey: string, isFolder: any, userId: string, sseKey: string) {
+    const s3Client = new S3ServiceClient(sseKey);
+    const dynamoClient = new DynamoClient();
 
     if (isFolder) {
       objectKey += '/';
@@ -208,18 +199,11 @@ const S3Service = {
     }
 
     await s3Client.deleteBucketObject(bucketName, objectKey);
-    return true;
-  },
 
-  deleteBucketObjects: async function(bucketName: string, objectKeys: string[]) {
-    const s3Client = new S3ServiceClient();
-    const { Deleted } = await s3Client.deleteBucketObjects(bucketName, objectKeys);
-    return { Deleted };
-  },
+    if (isFolder) {
+      dynamoClient.deleteSharing(userId, objectKey);
+    }
 
-  copyBucketObject: async function(bucketName: string, objectKey: string, copiedKey: string) {
-    const s3Client = new S3ServiceClient();
-    await s3Client.copyBucketObject(bucketName, objectKey, copiedKey);
     return true;
   },
 };
@@ -251,6 +235,13 @@ async function bucketContentParse(Contents, bucketType: BucketType|null = null, 
           node.sharing.shareWith = shareWith;
           node.sharing.shared = shareWith.length > 0;
         }
+      }
+
+      if (obj.originalKey) {
+        node.originalKey = obj.originalKey;
+      }
+      if (obj.shadowFolder) {
+        node.shadowFolder = obj.shadowFolder;
       }
 
       return node;
@@ -299,7 +290,8 @@ function generateParentDirectories(folder) {
       parentDirectories.push({
           Key: currentKey,
           LastModified: folder.LastModified,
-          Size: folder.Size
+          Size: folder.Size,
+          shadowFolder: true,
       });
   }
   return parentDirectories;
@@ -333,6 +325,24 @@ function mergeTree(tree1: BucketObject[], tree2: BucketObject[]): BucketObject[]
   }
 
   return Array.from(mergedMap.values());
+}
+
+function processParentPath(Contents: any[]|undefined) {
+  let deleteParentPart;
+
+  if (Contents && Contents.length > 0) {
+    let pathParts = Contents[0].Key.split('/');
+    if (pathParts.length > 2) {
+      deleteParentPart = pathParts.slice(0, -2).join('/') + '/';
+    }
+  }
+
+  if (deleteParentPart) {
+    Contents?.forEach(obj => {
+      obj.originalKey = obj.Key;
+      obj.Key = obj.Key.replace(deleteParentPart, '');
+    });
+  }
 }
 
 export default S3Service;
