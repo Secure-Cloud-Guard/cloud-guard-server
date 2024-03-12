@@ -7,7 +7,7 @@
   "scripts": {
     "build": "rimraf dist && tsc && cpy public dist",
     "prod": "cross-env NODE_ENV=production node --experimental-specifier-resolution=node ./dist/app.js",
-    "start": "node --experimental-specifier-resolution=node ./dist/app.js",
+    "start": "npm run build && node --experimental-specifier-resolution=node ./dist/app.js",
     "dev": "nodemon --esm --experimentalSpecifierResolution node ./app.ts"
   },
   "repository": {
