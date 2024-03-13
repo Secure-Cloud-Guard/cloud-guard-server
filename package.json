@@ -8,7 +8,7 @@
     "build": "rimraf dist && tsc && cpy public dist && cpy docs dist",
     "prod": "cross-env NODE_ENV=production node --experimental-specifier-resolution=node ./dist/app.js",
     "start": "node --experimental-specifier-resolution=node ./dist/app.js",
-    "ec2-start": "/home/ubuntu/.nvm/versions/node/v18.13.0/bin/node --experimental-specifier-resolution=node ./dist/app.js",
+    "ec2-start": "/usr/bin/sudo /home/ubuntu/.nvm/versions/node/v18.13.0/bin/node --experimental-specifier-resolution=node ./dist/app.js",
     "dev": "nodemon --esm --experimentalSpecifierResolution node ./app.ts"
   },
   "repository": {

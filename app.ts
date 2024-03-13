@@ -23,13 +23,27 @@ const __filename = url.fileURLToPath(import.meta.url);
 const __dirname = url.fileURLToPath(new URL('.', import.meta.url));
 
 const app: Express = express()
-const port = process.env.PORT || 3000;
+const port = process.env.PROD_PORT || process.env.PORT || 3000;
 
 // serve static files from the public directory
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Enable all cors requests
-app.use(cors());
+// app.use(cors());
+
+app.all('*', (req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  next();
+});
+
+app.options('*', (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Headers', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE');
+  res.sendStatus(200);
+});
 
 // Secure the app by setting various HTTP headers
 app.use(helmet());
